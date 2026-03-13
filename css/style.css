@@ -183,9 +183,21 @@ h1, h2, h3, h4 { font-family: var(--font-heading); color: var(--white); line-hei
 .section-header p { color: var(--gray); font-size: 0.95rem; }
 .section-header .line { width: 48px; height: 3px; background: var(--red); margin: 14px auto 0; border-radius: 2px; }
 
-/* ── Instagram Feed ── */
+/* ── Instagram Feed (Netflix-style) ── */
 .ig-feed-wrapper {
   max-width: var(--max-width); margin: 0 auto;
+}
+.ig-feed-wrapper behold-widget {
+  --behold-gap: 10px;
+  --behold-border-radius: 10px;
+  color: var(--white);
+}
+/* Override Behold blue links/text to match palette */
+.ig-feed-wrapper a,
+.ig-feed-wrapper span,
+.ig-feed-wrapper p,
+.ig-feed-wrapper div {
+  color: var(--white) !important;
 }
 
 /* ── Cards ── */
