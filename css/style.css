@@ -207,13 +207,21 @@ h1, h2, h3, h4 { font-family: var(--font-heading); color: var(--white); line-hei
 @media (max-width: 1024px) { .blog-cards { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .blog-cards { grid-template-columns: 1fr; } }
 
-/* ── Instagram CTA Section ── */
-.ig-cta {
-  background: var(--surface); text-align: center; padding: 80px 24px;
+/* ── Instagram Feed Section ── */
+.ig-section {
+  background: var(--surface); padding: 100px 24px 80px;
   border-top: 1px solid rgba(255,255,255,0.05);
 }
-.ig-cta h2 { font-size: 2rem; margin-bottom: 12px; }
-.ig-cta p { color: var(--gray-light); margin-bottom: 32px; max-width: 500px; margin-left: auto; margin-right: auto; }
+.ig-feed-wrapper {
+  max-width: var(--max-width); margin: 0 auto 48px;
+}
+.ig-feed-wrapper behold-widget {
+  --behold-border-radius: 12px;
+  --behold-gap: 16px;
+}
+.ig-cta-bottom {
+  text-align: center;
+}
 .ig-handle { font-size: 1.4rem; color: var(--red-light); font-weight: 700; margin-bottom: 24px; display: block; }
 
 /* ── Footer ── */
