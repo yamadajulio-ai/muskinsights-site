@@ -78,6 +78,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ── Lightbox for clickable images ──
+  const lightbox = document.createElement('div');
+  lightbox.id = 'lightbox';
+  lightbox.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);justify-content:center;align-items:center;cursor:zoom-out;';
+  lightbox.innerHTML = '<button style="position:absolute;top:20px;right:24px;background:none;border:none;color:#fff;font-size:2.5rem;cursor:pointer;z-index:10000;line-height:1;" aria-label="Fechar">&times;</button><img style="max-width:92vw;max-height:92vh;border-radius:8px;object-fit:contain;" alt="">';
+  document.body.appendChild(lightbox);
+
+  const lbImg = lightbox.querySelector('img');
+  const lbClose = lightbox.querySelector('button');
+
+  function openLightbox(src) {
+    lbImg.src = src;
+    lightbox.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox() {
+    lightbox.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  lbClose.addEventListener('click', closeLightbox);
+  lightbox.addEventListener('click', (e) => { if (e.target !== lbImg) closeLightbox(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+
+  // Convert image links that open in new tab to lightbox
+  document.querySelectorAll('a[target="_blank"]').forEach(a => {
+    const href = a.getAttribute('href');
+    if (href && /\.(png|jpg|jpeg|webp|gif)$/i.test(href)) {
+      a.removeAttribute('target');
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        openLightbox(href);
+      });
+      a.style.cursor = 'zoom-in';
+    }
+  });
+
   // ── Nav background on scroll ──
   const nav = document.querySelector('.nav');
   if (nav) {
