@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yamada Clubes - Dashboard</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f1117;--card:#1a1d27;--card2:#242736;--text:#e6e6e6;--muted:#8b8fa3;--accent:#6366f1;--green:#22c55e;--red:#ef4444;--yellow:#eab308;--blue:#3b82f6;--border:#2d3148}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+
+.header{padding:24px 32px;border-bottom:1px solid var(--border)}
+.header h1{font-size:24px;font-weight:700}
+.header p{font-size:13px;color:var(--muted);margin-top:4px}
+
+.kpis{display:flex;gap:16px;padding:24px 32px;flex-wrap:wrap}
+.kpi{background:var(--card);border-radius:12px;padding:20px 24px;border:1px solid var(--border);flex:1;min-width:170px}
+.kpi-label{color:var(--muted);font-size:13px;font-weight:500;margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:700}
+.kpi-sub{font-size:12px;color:var(--accent);margin-top:4px}
+
+.tabs{display:flex;gap:4px;padding:8px 32px 0;border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:12px 24px;border-radius:8px 8px 0 0;font-size:14px;font-weight:500;color:var(--muted);background:var(--card);cursor:pointer;border:none;white-space:nowrap;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--text);background:var(--card2);border-bottom:2px solid var(--accent)}
+
+.content{padding:24px 32px}
+.panel{display:none}
+.panel.active{display:block}
+
+.chart-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px}
+.chart-box{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:16px;flex:1;min-width:340px}
+
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--card2);color:var(--text);font-weight:600;text-align:left;padding:10px 12px;border:1px solid var(--border);position:sticky;top:0;cursor:pointer}
+th:hover{background:var(--accent);color:#fff}
+td{padding:8px 12px;border:1px solid var(--border);white-space:nowrap}
+tr:nth-child(odd) td{background:var(--card)}
+tr:nth-child(even) td{background:var(--card2)}
+tr:hover td{background:rgba(99,102,241,0.12)!important}
+.ag-row td{border-left:3px solid var(--yellow)}
+.alert-row td{background:rgba(239,68,68,0.06)!important}
+
+.table-wrap{overflow-x:auto;max-height:80vh;border-radius:8px;border:1px solid var(--border)}
+
+.filter-bar{display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+.filter-bar label{color:var(--muted);font-size:13px}
+.filter-bar select,.filter-bar input{background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px}
+.filter-bar input{width:220px}
+
+.info-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-top:16px}
+.info-box h3{font-size:15px;margin-bottom:8px}
+.info-box p{font-size:13px;color:var(--muted);line-height:1.6}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.badge-ag{background:rgba(234,179,8,0.15);color:var(--yellow)}
+.badge-jg{background:rgba(99,102,241,0.15);color:var(--accent)}
+.badge-ypt{background:rgba(59,130,246,0.15);color:var(--blue);margin-left:4px}
+.badge-alert{background:rgba(239,68,68,0.15);color:var(--red);margin-left:4px}
+
+.profit-pos{color:var(--green)}
+.profit-neg{color:var(--red)}
+
+@media(max-width:768px){
+  .kpis{flex-direction:column}
+  .header{padding:16px}
+  .content{padding:16px}
+  .tabs{padding:8px 16px 0}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Yamada Clubes — Dashboard de Retencao</h1>
+  <p>Score: 30% Rake + 10% Rake Recente + 25% Lucro Clube + 15% Hands + 15% Frequencia + 5% Rating</p>
+</div>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" data-tab="ranking">Ranking Top 100</button>
+  <button class="tab" data-tab="top30">Top 30 Visual</button>
+  <button class="tab" data-tab="margem">Analise de Margem</button>
+  <button class="tab" data-tab="evolucao">Evolucao Semanal</button>
+  <button class="tab" data-tab="alertas">Alertas</button>
+</div>
+
+<div class="content">
+  <div class="panel active" id="panel-ranking">
+    <div class="filter-bar">
+      <label>Filtro:</label>
+      <select id="filterTipo">
+        <option value="all">Todos</option>
+        <option value="Jogador">Jogadores</option>
+        <option value="Agente">Agentes</option>
+        <option value="ext">Sem YPT/Time</option>
+      </select>
+      <label>Buscar:</label>
+      <input type="text" id="searchName" placeholder="Nome do jogador...">
+    </div>
+    <div class="table-wrap"><table id="mainTable"><thead></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="panel" id="panel-top30">
+    <div id="chartBar" class="chart-box"></div>
+    <div class="chart-row">
+      <div id="chartPie" class="chart-box"></div>
+      <div id="chartTipo" class="chart-box"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-margem">
+    <div id="chartScatter" class="chart-box"></div>
+    <div class="info-box">
+      <h3>O que e Margem?</h3>
+      <p>Margem = Lucro Clube / Rake Total. Quanto menor a margem, mais caro e manter o jogador (rakeback alto).<br>
+      As linhas pontilhadas no grafico marcam margens de 8%, 20% e 40%.<br>
+      Jogadores abaixo da linha de 8% geram volume mas deixam pouco lucro pro clube.</p>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-evolucao">
+    <div id="chartLine" class="chart-box"></div>
+  </div>
+
+  <div class="panel" id="panel-alertas">
+    <h3 style="color:var(--red);margin-bottom:12px">Jogadores com Margem &lt; 8% e Rake &gt; $2.000</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px">Esses jogadores custam caro (rakeback alto) e deixam pouco lucro. Candidatos para renegociacao de rakeback.</p>
+    <div class="table-wrap"><table id="alertTable"><thead></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<script>
+// DATA INJECTED BY PYTHON BUILD SCRIPT
+let DATA = [];
+let WEEKLY = [];
+// PLACEHOLDER_DATA
+
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+function fmt(v){ return '$' + Math.round(v).toLocaleString('en-US') }
+function fmtD(v){ return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) }
+function pct(v){ return v.toFixed(1) + '%' }
+
+// KPIs
+function renderKPIs(){
+  const total = DATA.length;
+  const agentes = DATA.filter(d=>d.tipo==='Agente').length;
+  const rake = DATA.reduce((s,d)=>s+d.rake,0);
+  const lucro = DATA.reduce((s,d)=>s+d.lucro,0);
+  const hands = DATA.reduce((s,d)=>s+d.hands,0);
+  const t30rake = DATA.slice(0,30).reduce((s,d)=>s+d.rake,0);
+  const t30lucro = DATA.slice(0,30).reduce((s,d)=>s+d.lucro,0);
+  const alerts = DATA.filter(d=>d.margem<8 && d.rake>2000).length;
+  $('#kpis').innerHTML = [
+    kpi('Jogadores Ativos', total, `${agentes} agentes + ${total-agentes} jogadores`),
+    kpi('Rake Total (6 sem)', fmt(rake), `Top 30 = ${(t30rake/rake*100).toFixed(1)}%`),
+    kpi('Lucro Clube (6 sem)', fmt(lucro), `Top 30 = ${(t30lucro/lucro*100).toFixed(1)}%`),
+    kpi('Hands Totais', hands.toLocaleString(), '6 fechamentos analisados'),
+    kpi('Alerta Margem', alerts + ' jogadores', 'Margem < 8% com Rake > $2K'),
+  ].join('');
+}
+function kpi(label, value, sub){
+  return `<div class="kpi"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div><div class="kpi-sub">${sub}</div></div>`;
+}
+
+// TABS
+document.addEventListener('click', e => {
+  if(!e.target.classList.contains('tab')) return;
+  $$('.tab').forEach(t=>t.classList.remove('active'));
+  $$('.panel').forEach(p=>p.classList.remove('active'));
+  e.target.classList.add('active');
+  $(`#panel-${e.target.dataset.tab}`).classList.add('active');
+});
+
+// TABLE
+let sortCol = -1, sortAsc = true;
+const COLS = ['#','Nome','Score','Tipo','Acao','Rake Total','Rake Recente','Lucro Clube','Profit','Margem','Hands','Semanas','Contas','Clubes','Rakeback'];
+
+function renderTable(){
+  const filter = $('#filterTipo').value;
+  const search = $('#searchName').value.toLowerCase();
+  let rows = DATA.filter(d => {
+    if(filter==='Agente' && d.tipo!=='Agente') return false;
+    if(filter==='Jogador' && d.tipo!=='Jogador') return false;
+    if(filter==='ext' && d.ypt) return false;
+    if(search && !d.nome.toLowerCase().includes(search)) return false;
+    return true;
+  }).slice(0,100);
+
+  if(sortCol >= 0){
+    const key = ['rank','nome','score','tipo','acao','rake','rakeR','lucro','profit','margem','hands','semanas','nids','clubes','rb'][sortCol];
+    rows.sort((a,b) => {
+      let va = a[key], vb = b[key];
+      if(typeof va === 'string') va = va.toLowerCase();
+      if(typeof vb === 'string') vb = vb.toLowerCase();
+      return sortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+    });
+  }
+
+  const thead = COLS.map((c,i)=>`<th data-col="${i}">${c}${sortCol===i?(sortAsc?' ▲':' ▼'):''}</th>`).join('');
+  const tbody = rows.map(d => {
+    const cls = [d.tipo==='Agente'?'ag-row':'', d.margem<8&&d.rake>2000?'alert-row':''].join(' ');
+    const tipoBadge = d.tipo==='Agente' ? '<span class="badge badge-ag">AG</span>' : '<span class="badge badge-jg">JG</span>';
+    const yptBadge = d.ypt ? '<span class="badge badge-ypt">YPT</span>' : '';
+    const marginBadge = d.margem<8&&d.rake>3000 ? '<span class="badge badge-alert">!MARGEM</span>' : '';
+    const profitClass = d.profit >= 0 ? 'profit-pos' : 'profit-neg';
+    return `<tr class="${cls}">
+      <td>${d.rank}</td>
+      <td><b>${d.nome}</b>${yptBadge}${marginBadge}</td>
+      <td>${d.score.toFixed(1)}</td>
+      <td>${tipoBadge}</td>
+      <td>${d.acao}</td>
+      <td>${fmt(d.rake)}</td>
+      <td>${fmt(d.rakeR)}</td>
+      <td>${fmt(d.lucro)}</td>
+      <td class="${profitClass}">${fmtD(d.profit)}</td>
+      <td>${pct(d.margem)}</td>
+      <td>${d.hands.toLocaleString()}</td>
+      <td>${d.semanas}/6</td>
+      <td>${d.nids}</td>
+      <td>${d.clubes}</td>
+      <td>${pct(d.rb)}</td>
+    </tr>`;
+  }).join('');
+  $('#mainTable thead').innerHTML = `<tr>${thead}</tr>`;
+  $('#mainTable tbody').innerHTML = tbody;
+}
+
+$('#mainTable').addEventListener('click', e => {
+  const th = e.target.closest('th');
+  if(!th) return;
+  const col = parseInt(th.dataset.col);
+  if(sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = true; }
+  renderTable();
+});
+$('#filterTipo').addEventListener('change', renderTable);
+$('#searchName').addEventListener('input', renderTable);
+
+// ALERT TABLE
+function renderAlerts(){
+  const alerts = DATA.filter(d=>d.margem<8 && d.rake>2000).sort((a,b)=>b.rake-a.rake);
+  const cols = ['#','Nome','Rake','Lucro','Profit','Margem','Rakeback','Acao'];
+  const thead = cols.map(c=>`<th>${c}</th>`).join('');
+  const tbody = alerts.map(d => {
+    const profitClass = d.profit >= 0 ? 'profit-pos' : 'profit-neg';
+    return `<tr class="alert-row">
+      <td>${d.rank}</td><td><b>${d.nome}</b></td><td>${fmt(d.rake)}</td>
+      <td>${fmt(d.lucro)}</td><td class="${profitClass}">${fmtD(d.profit)}</td>
+      <td>${pct(d.margem)}</td><td>${pct(d.rb)}</td><td>${d.acao}</td>
+    </tr>`;
+  }).join('');
+  $('#alertTable thead').innerHTML = `<tr>${thead}</tr>`;
+  $('#alertTable tbody').innerHTML = tbody;
+}
+
+// CHARTS
+function renderCharts(){
+  const t30 = DATA.slice(0,30).slice().reverse();
+  // Bar chart
+  Plotly.newPlot('chartBar', [
+    {y:t30.map(d=>d.nome), x:t30.map(d=>d.rake), type:'bar', orientation:'h', name:'Rake Total',
+     marker:{color:'#6366f1',opacity:0.85}, text:t30.map(d=>fmt(d.rake)), textposition:'outside', textfont:{size:10,color:'#8b8fa3'}},
+    {y:t30.map(d=>d.nome), x:t30.map(d=>d.lucro), type:'bar', orientation:'h', name:'Lucro Clube',
+     marker:{color:'#22c55e',opacity:0.85}, text:t30.map(d=>fmt(d.lucro)), textposition:'outside', textfont:{size:10,color:'#8b8fa3'}},
+  ], {barmode:'group', height:900, plot_bgcolor:'#1a1d27', paper_bgcolor:'#1a1d27',
+    font:{color:'#e6e6e6',size:11}, margin:{l:180,r:80,t:50,b:40},
+    legend:{orientation:'h',yanchor:'bottom',y:1.02,xanchor:'right',x:1},
+    xaxis:{gridcolor:'#2d3148',title:'Valor ($)',zeroline:false}, yaxis:{gridcolor:'#2d3148'},
+    title:{text:'Top 30 — Rake vs Lucro Clube',font:{size:16}}}, {displayModeBar:false});
+
+  // Pie
+  const bins = ['Top 10','Top 11-30','Top 31-100','Demais'];
+  const vals = [DATA.slice(0,10).reduce((s,d)=>s+d.rake,0), DATA.slice(10,30).reduce((s,d)=>s+d.rake,0),
+                DATA.slice(30,100).reduce((s,d)=>s+d.rake,0), DATA.slice(100).reduce((s,d)=>s+d.rake,0)];
+  const totalRake = DATA.reduce((s,d)=>s+d.rake,0);
+  Plotly.newPlot('chartPie', [{labels:bins, values:vals, type:'pie', hole:0.5,
+    marker:{colors:['#6366f1','#818cf8','#a5b4fc','#2d3148']},
+    textinfo:'label+percent', textfont:{size:12,color:'#e6e6e6'}}],
+    {height:350, plot_bgcolor:'#1a1d27', paper_bgcolor:'#1a1d27', font:{color:'#e6e6e6'}, showlegend:false,
+     margin:{l:20,r:20,t:50,b:20}, title:{text:'Concentracao do Rake',font:{size:14}},
+     annotations:[{text:fmt(totalRake),x:0.5,y:0.5,font:{size:15,color:'#e6e6e6'},showarrow:false}]}, {displayModeBar:false});
+
+  // Tipo
+  const tipos = ['Jogador','Agente'];
+  const rakeByTipo = tipos.map(t=>DATA.filter(d=>d.tipo===t).reduce((s,d)=>s+d.rake,0));
+  const lucroByTipo = tipos.map(t=>DATA.filter(d=>d.tipo===t).reduce((s,d)=>s+d.lucro,0));
+  Plotly.newPlot('chartTipo', [
+    {x:tipos, y:rakeByTipo, type:'bar', name:'Rake', marker:{color:'#6366f1'}},
+    {x:tipos, y:lucroByTipo, type:'bar', name:'Lucro', marker:{color:'#22c55e'}},
+  ], {barmode:'group', height:350, plot_bgcolor:'#1a1d27', paper_bgcolor:'#1a1d27',
+      font:{color:'#e6e6e6'}, margin:{l:60,r:20,t:50,b:40},
+      xaxis:{gridcolor:'#2d3148'}, yaxis:{gridcolor:'#2d3148',title:'$'},
+      title:{text:'Agentes vs Jogadores',font:{size:14}},
+      legend:{orientation:'h',yanchor:'bottom',y:1.02,xanchor:'right',x:1}}, {displayModeBar:false});
+
+  // Scatter
+  const top100 = DATA.slice(0,100);
+  const maxRake = Math.max(...top100.map(d=>d.rake));
+  const traces = ['Jogador','Agente'].map(tipo => {
+    const sub = top100.filter(d=>d.tipo===tipo);
+    return {x:sub.map(d=>d.rake), y:sub.map(d=>d.lucro), mode:'markers+text', name:tipo, type:'scatter',
+      marker:{size:sub.map(d=>Math.max(d.hands/2000+5,6)), opacity:0.7,
+              color:tipo==='Jogador'?'#6366f1':'#eab308'},
+      text:sub.map(d=>d.rank<=15?d.nome:''), textposition:'top center', textfont:{size:9,color:'#e6e6e6'},
+      hovertemplate:'<b>%{customdata[0]}</b><br>Rake: $%{x:,.0f}<br>Lucro: $%{y:,.0f}<br>Margem: %{customdata[1]:.1f}%<extra></extra>',
+      customdata:sub.map(d=>[d.nome,d.margem])};
+  });
+  [8,20,40].forEach(p => traces.push({x:[0,maxRake],y:[0,maxRake*p/100],mode:'lines',
+    line:{dash:'dot',color:'#8b8fa3',width:1},showlegend:false,hoverinfo:'skip'}));
+  Plotly.newPlot('chartScatter', traces,
+    {height:500, plot_bgcolor:'#1a1d27', paper_bgcolor:'#1a1d27', font:{color:'#e6e6e6',size:11},
+     xaxis:{title:'Rake Total ($)',gridcolor:'#2d3148',zeroline:false},
+     yaxis:{title:'Lucro Clube ($)',gridcolor:'#2d3148',zeroline:false},
+     legend:{orientation:'h',yanchor:'bottom',y:1.02,xanchor:'right',x:1},
+     margin:{l:60,r:20,t:50,b:50},
+     title:{text:'Rake vs Lucro (tamanho=hands, linhas=margem 8%/20%/40%)',font:{size:14}}}, {displayModeBar:false});
+
+  // Line
+  if(WEEKLY.length > 0){
+    const top10 = DATA.slice(0,10).map(d=>d.nome);
+    const lineTraces = top10.map(nome => {
+      const pts = WEEKLY.filter(w=>w.nome===nome).sort((a,b)=>a.semana.localeCompare(b.semana));
+      return {x:pts.map(p=>p.semana), y:pts.map(p=>p.rake), mode:'lines+markers', name:nome};
+    });
+    Plotly.newPlot('chartLine', lineTraces,
+      {height:450, plot_bgcolor:'#1a1d27', paper_bgcolor:'#1a1d27', font:{color:'#e6e6e6',size:11},
+       xaxis:{gridcolor:'#2d3148',title:''}, yaxis:{gridcolor:'#2d3148',title:'Rake ($)'},
+       legend:{font:{size:10}}, margin:{l:60,r:20,t:50,b:40},
+       title:{text:'Evolucao Semanal de Rake — Top 10',font:{size:14}}}, {displayModeBar:false});
+  }
+}
+
+function init(){
+  renderKPIs();
+  renderTable();
+  renderAlerts();
+  renderCharts();
+}
+
+// Load data from external JSON
+fetch('data.json').then(r=>r.json()).then(d=>{
+  DATA = d.players;
+  WEEKLY = d.weekly;
+  init();
+}).catch(e => {
+  document.body.innerHTML = '<div style="padding:40px;color:#ef4444"><h2>Erro ao carregar dados</h2><p>'+e+'</p></div>';
+});
+</script>
+</body>
+</html>

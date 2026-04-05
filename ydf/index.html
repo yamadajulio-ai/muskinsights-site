@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yamada Clubes - Dashboard Completo (6 meses)</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f1117;--card:#1a1d27;--card2:#242736;--text:#e6e6e6;--muted:#8b8fa3;--accent:#6366f1;--green:#22c55e;--red:#ef4444;--yellow:#eab308;--blue:#3b82f6;--border:#2d3148}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+.header{padding:24px 32px;border-bottom:1px solid var(--border)}
+.header h1{font-size:24px;font-weight:700}
+.header p{font-size:13px;color:var(--muted);margin-top:4px}
+.date-filter{display:flex;gap:6px;padding:16px 32px;flex-wrap:wrap;border-bottom:1px solid var(--border);align-items:center}
+.date-btn{padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;color:var(--muted);background:var(--card);cursor:pointer;border:1px solid var(--border);transition:all .15s}
+.date-btn:hover{color:var(--text);border-color:var(--accent)}
+.date-btn.active{color:#fff;background:var(--accent);border-color:var(--accent)}
+.date-label{color:var(--muted);font-size:13px;font-weight:500;margin-right:8px}
+.kpis{display:flex;gap:16px;padding:24px 32px;flex-wrap:wrap}
+.kpi{background:var(--card);border-radius:12px;padding:20px 24px;border:1px solid var(--border);flex:1;min-width:170px}
+.kpi-label{color:var(--muted);font-size:13px;font-weight:500;margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:700}
+.kpi-sub{font-size:12px;color:var(--accent);margin-top:4px}
+.tabs{display:flex;gap:4px;padding:8px 32px 0;border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:12px 24px;border-radius:8px 8px 0 0;font-size:14px;font-weight:500;color:var(--muted);background:var(--card);cursor:pointer;border:none;white-space:nowrap;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--text);background:var(--card2);border-bottom:2px solid var(--accent)}
+.content{padding:24px 32px}
+.panel{display:none}
+.panel.active{display:block}
+.chart-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px}
+.chart-box{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:16px;flex:1;min-width:340px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--card2);color:var(--text);font-weight:600;text-align:left;padding:10px 12px;border:1px solid var(--border);position:sticky;top:0;cursor:pointer}
+th:hover{background:var(--accent);color:#fff}
+td{padding:8px 12px;border:1px solid var(--border);white-space:nowrap}
+tr:nth-child(odd) td{background:var(--card)}
+tr:nth-child(even) td{background:var(--card2)}
+tr:hover td{background:rgba(99,102,241,0.12)!important}
+.ag-row td{border-left:3px solid var(--yellow)}
+.alert-row td{background:rgba(239,68,68,0.06)!important}
+.table-wrap{overflow-x:auto;max-height:80vh;border-radius:8px;border:1px solid var(--border)}
+.filter-bar{display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+.filter-bar label{color:var(--muted);font-size:13px}
+.filter-bar select,.filter-bar input{background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px}
+.filter-bar input{width:220px}
+.info-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-top:16px}
+.info-box h3{font-size:15px;margin-bottom:8px}
+.info-box p{font-size:13px;color:var(--muted);line-height:1.6}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.badge-ag{background:rgba(234,179,8,0.15);color:var(--yellow)}
+.badge-jg{background:rgba(99,102,241,0.15);color:var(--accent)}
+.badge-ypt{background:rgba(59,130,246,0.15);color:var(--blue);margin-left:4px}
+.badge-alert{background:rgba(239,68,68,0.15);color:var(--red);margin-left:4px}
+.profit-pos{color:var(--green)}
+.profit-neg{color:var(--red)}
+@media(max-width:768px){.kpis{flex-direction:column}.header{padding:16px}.content{padding:16px}.tabs{padding:8px 16px 0}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Yamada Clubes — Dashboard Completo</h1>
+  <p id="headerSub"></p>
+</div>
+
+<div class="date-filter" id="dateFilter">
+  <span class="date-label">Periodo:</span>
+  <button class="date-btn" data-weeks="4">4 semanas</button>
+  <button class="date-btn" data-weeks="8">8 semanas</button>
+  <button class="date-btn" data-weeks="13">3 meses</button>
+  <button class="date-btn active" data-weeks="0">6 meses (tudo)</button>
+</div>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="ranking">Ranking Top 100</button>
+  <button class="tab" data-tab="top30">Top 30 Visual</button>
+  <button class="tab" data-tab="margem">Analise de Margem</button>
+  <button class="tab" data-tab="evolucao">Evolucao Semanal</button>
+  <button class="tab" data-tab="alertas">Alertas</button>
+</div>
+
+<div class="content">
+  <div class="panel active" id="panel-ranking">
+    <div class="filter-bar">
+      <label>Filtro:</label>
+      <select id="filterTipo">
+        <option value="all">Todos</option>
+        <option value="Jogador">Jogadores</option>
+        <option value="Agente">Agentes</option>
+        <option value="ext">Sem YPT/Time</option>
+      </select>
+      <label>Buscar:</label>
+      <input type="text" id="searchName" placeholder="Nome do jogador...">
+    </div>
+    <div class="table-wrap"><table id="mainTable"><thead></thead><tbody></tbody></table></div>
+  </div>
+  <div class="panel" id="panel-top30">
+    <div id="chartBar" class="chart-box"></div>
+    <div class="chart-row">
+      <div id="chartPie" class="chart-box"></div>
+      <div id="chartTipo" class="chart-box"></div>
+    </div>
+  </div>
+  <div class="panel" id="panel-margem">
+    <div id="chartScatter" class="chart-box"></div>
+    <div class="info-box"><h3>O que e Margem?</h3>
+    <p>Margem = Lucro Clube / Rake Total. Quanto menor, mais caro manter o jogador (rakeback alto).<br>
+    Linhas pontilhadas = margem 8%, 20% e 40%. Abaixo de 8% = pouco lucro pro clube.</p></div>
+  </div>
+  <div class="panel" id="panel-evolucao"><div id="chartLine" class="chart-box"></div></div>
+  <div class="panel" id="panel-alertas">
+    <h3 style="color:var(--red);margin-bottom:12px">Jogadores com Margem &lt; 8% e Rake &gt; $2.000</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px">Candidatos para renegociacao de rakeback.</p>
+    <div class="table-wrap"><table id="alertTable"><thead></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<script>
+let RAW_PLAYERS = [];  // full-period pre-computed (with tipo, ypt, rb, nids, clubes)
+let RAW_WEEKLY = [];   // {n:nome, s:semana, r:rake, l:lucro, h:hands, p:profit}
+let META = {};
+let DATA = [];         // computed for current period
+let activeWeeks = 0;   // 0 = all
+
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+function fmt(v){ return '$' + Math.round(v).toLocaleString('en-US') }
+function fmtD(v){ return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) }
+function pct(v){ return v.toFixed(1) + '%' }
+
+// ========== DATE FILTER ==========
+$('#dateFilter').addEventListener('click', e => {
+  const btn = e.target.closest('.date-btn');
+  if(!btn) return;
+  $$('.date-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activeWeeks = parseInt(btn.dataset.weeks);
+  recompute();
+});
+
+function getFilteredWeeks(){
+  if(activeWeeks === 0) return META.all_weeks;
+  return META.all_weeks.slice(-activeWeeks);
+}
+
+// ========== RECOMPUTE FROM WEEKLY DATA ==========
+function recompute(){
+  const validWeeks = new Set(getFilteredWeeks());
+  const nw = validWeeks.size;
+  const recentN = Math.max(1, Math.floor(nw * 0.3));
+  const allW = [...validWeeks].sort();
+  const recentWeeks = new Set(allW.slice(-recentN));
+
+  // Aggregate weekly data per player
+  const byPlayer = {};
+  for(const w of RAW_WEEKLY){
+    if(!validWeeks.has(w.s)) continue;
+    if(!byPlayer[w.n]) byPlayer[w.n] = {rake:0, lucro:0, hands:0, profit:0, rakeR:0, semanas:new Set()};
+    const p = byPlayer[w.n];
+    p.rake += w.r; p.lucro += w.l; p.hands += w.h; p.profit += w.p;
+    p.semanas.add(w.s);
+    if(recentWeeks.has(w.s)) p.rakeR += w.r;
+  }
+
+  // Build player list with metadata from RAW_PLAYERS
+  const metaMap = {};
+  for(const rp of RAW_PLAYERS) metaMap[rp.nome] = rp;
+
+  let players = [];
+  for(const [nome, agg] of Object.entries(byPlayer)){
+    const m = metaMap[nome] || {};
+    const sem = agg.semanas.size;
+    const margem = agg.rake > 0 ? (agg.lucro / agg.rake * 100) : 0;
+    players.push({
+      nome, tipo: m.tipo||'Jogador', ypt: m.ypt||false, rb: m.rb||0,
+      nids: m.nids||1, clubes: m.clubes||'',
+      rake: agg.rake, rakeR: agg.rakeR, lucro: agg.lucro, profit: agg.profit,
+      hands: agg.hands, semanas: sem,
+      margem, winrate: agg.hands > 0 ? agg.profit / agg.hands : null,
+      rakeAvg: sem > 0 ? agg.rake / sem : 0,
+    });
+  }
+
+  // Score
+  const mx = {}, mn = {};
+  for(const k of ['rake','rakeR','lucro','hands']){
+    mx[k] = Math.max(...players.map(p=>p[k]));
+    mn[k] = Math.min(...players.map(p=>p[k]));
+  }
+  const freqs = players.map(p=>p.semanas/nw);
+  const mxF = Math.max(...freqs), mnF = Math.min(...freqs);
+
+  players.forEach((p,i) => {
+    const norm = k => (mx[k]-mn[k]) ? (p[k]-mn[k])/(mx[k]-mn[k]) : 0;
+    const fNorm = (mxF-mnF) ? ((p.semanas/nw)-mnF)/(mxF-mnF) : 0;
+    p.score = (0.30*norm('rake') + 0.10*norm('rakeR') + 0.25*norm('lucro') + 0.15*norm('hands') + 0.15*fNorm + 0.05) * 100;
+  });
+
+  // Normalize scores 0-100
+  const sMax = Math.max(...players.map(p=>p.score));
+  const sMin = Math.min(...players.map(p=>p.score));
+  players.forEach(p => { p.score = sMax>sMin ? (p.score-sMin)/(sMax-sMin)*100 : 50; });
+
+  // Action
+  players.forEach(p => {
+    const acts = [];
+    if(p.margem < 8 && p.rake > 3000) acts.push('Renegociar rakeback');
+    if(p.nids > 5) acts.push('Consolidar contas');
+    if(p.rakeR < p.rake*0.1 && p.semanas >= nw*0.5) acts.push('Investigar queda');
+    if(p.semanas <= nw*0.15) acts.push('Reativar');
+    if(!acts.length){
+      if(p.score > 75) acts.push('Blindar relacionamento');
+      else if(p.score > 50) acts.push('Manter e valorizar');
+      else acts.push('Monitorar');
+    }
+    p.acao = acts.join(' + ');
+  });
+
+  // Sort and rank
+  players.sort((a,b) => b.score - a.score);
+  players.forEach((p,i) => p.rank = i+1);
+
+  DATA = players;
+  META._nw = nw;
+  META._period = `${allW[0]} a ${allW[allW.length-1]} (${nw} semanas)`;
+
+  $('#headerSub').textContent = META._period + ' — Score: 30% Rake + 10% Recente + 25% Lucro + 15% Hands + 15% Freq + 5% Rating';
+  sortCol = -1;
+  renderAll();
+}
+
+// ========== RENDER ALL ==========
+function renderAll(){
+  renderKPIs(); renderTable(); renderAlerts(); renderCharts();
+}
+
+function renderKPIs(){
+  const nw = META._nw;
+  const total = DATA.length;
+  const agentes = DATA.filter(d=>d.tipo==='Agente').length;
+  const rake = DATA.reduce((s,d)=>s+d.rake,0);
+  const lucro = DATA.reduce((s,d)=>s+d.lucro,0);
+  const hands = DATA.reduce((s,d)=>s+d.hands,0);
+  const t30 = DATA.slice(0,30);
+  const t30r = t30.reduce((s,d)=>s+d.rake,0);
+  const t30l = t30.reduce((s,d)=>s+d.lucro,0);
+  const alerts = DATA.filter(d=>d.margem<8 && d.rake>2000).length;
+  $('#kpis').innerHTML = [
+    kpi('Jogadores Ativos', total, `${agentes} agentes + ${total-agentes} jogadores`),
+    kpi('Rake Total (' + nw + ' sem)', fmt(rake), `Top 30 = ${(t30r/rake*100).toFixed(1)}%`),
+    kpi('Lucro Clube (' + nw + ' sem)', fmt(lucro), `Top 30 = ${(t30l/lucro*100).toFixed(1)}%`),
+    kpi('Hands Totais', hands.toLocaleString(), nw + ' semanas'),
+    kpi('Alerta Margem', alerts + ' jogadores', 'Margem < 8% com Rake > $2K'),
+  ].join('');
+}
+function kpi(l,v,s){ return `<div class="kpi"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div><div class="kpi-sub">${s}</div></div>`; }
+
+// TABS
+document.addEventListener('click', e => {
+  if(!e.target.classList.contains('tab')) return;
+  $$('.tab').forEach(t=>t.classList.remove('active'));
+  $$('.panel').forEach(p=>p.classList.remove('active'));
+  e.target.classList.add('active');
+  $(`#panel-${e.target.dataset.tab}`).classList.add('active');
+});
+
+// TABLE
+let sortCol = -1, sortAsc = true;
+const COLS = ['#','Nome','Score','Tipo','Acao','Rake Total','Rake/Sem','Rake Recente','Lucro Clube','Profit','Winrate $/mao','Margem','Hands','Semanas','Contas','Clubes','Rakeback'];
+const KEYS = ['rank','nome','score','tipo','acao','rake','rakeAvg','rakeR','lucro','profit','winrate','margem','hands','semanas','nids','clubes','rb'];
+
+function renderTable(){
+  const filter = $('#filterTipo').value;
+  const search = $('#searchName').value.toLowerCase();
+  let rows = DATA.filter(d => {
+    if(filter==='Agente' && d.tipo!=='Agente') return false;
+    if(filter==='Jogador' && d.tipo!=='Jogador') return false;
+    if(filter==='ext' && d.ypt) return false;
+    if(search && !d.nome.toLowerCase().includes(search)) return false;
+    return true;
+  }).slice(0,100);
+
+  if(sortCol >= 0){
+    const key = KEYS[sortCol];
+    rows.sort((a,b) => {
+      let va=a[key]??-Infinity, vb=b[key]??-Infinity;
+      if(typeof va==='string') va=va.toLowerCase();
+      if(typeof vb==='string') vb=vb.toLowerCase();
+      return sortAsc ? (va>vb?1:-1) : (va<vb?1:-1);
+    });
+  }
+
+  const nw = META._nw;
+  const thead = COLS.map((c,i)=>`<th data-col="${i}">${c}${sortCol===i?(sortAsc?' ▲':' ▼'):''}</th>`).join('');
+  const tbody = rows.map(d => {
+    const cls = [d.tipo==='Agente'?'ag-row':'', d.margem<8&&d.rake>2000?'alert-row':''].join(' ');
+    const tipoBadge = d.tipo==='Agente' ? '<span class="badge badge-ag">AG</span>' : '<span class="badge badge-jg">JG</span>';
+    const yptBadge = d.ypt ? '<span class="badge badge-ypt">YPT</span>' : '';
+    const marginBadge = d.margem<8&&d.rake>3000 ? '<span class="badge badge-alert">!MARGEM</span>' : '';
+    const pc = d.profit>=0?'profit-pos':'profit-neg';
+    const wc = d.winrate==null?'':(d.winrate>=0?'profit-pos':'profit-neg');
+    return `<tr class="${cls}">
+      <td>${d.rank}</td>
+      <td><b>${d.nome}</b>${yptBadge}${marginBadge}</td>
+      <td>${d.score.toFixed(1)}</td>
+      <td>${tipoBadge}</td>
+      <td>${d.acao}</td>
+      <td>${fmt(d.rake)}</td>
+      <td>${fmt(d.rakeAvg)}</td>
+      <td>${fmt(d.rakeR)}</td>
+      <td>${fmt(d.lucro)}</td>
+      <td class="${pc}">${fmtD(d.profit)}</td>
+      <td class="${wc}">${d.winrate==null?'N/A':fmtD(d.winrate)}</td>
+      <td>${pct(d.margem)}</td>
+      <td>${d.hands.toLocaleString()}</td>
+      <td>${d.semanas}/${nw}</td>
+      <td>${d.nids}</td>
+      <td>${d.clubes}</td>
+      <td>${pct(d.rb)}</td>
+    </tr>`;
+  }).join('');
+  $('#mainTable thead').innerHTML = `<tr>${thead}</tr>`;
+  $('#mainTable tbody').innerHTML = tbody;
+}
+
+$('#mainTable').addEventListener('click', e => {
+  const th = e.target.closest('th');
+  if(!th) return;
+  const col = parseInt(th.dataset.col);
+  if(sortCol===col) sortAsc=!sortAsc; else { sortCol=col; sortAsc=true; }
+  renderTable();
+});
+$('#filterTipo').addEventListener('change', renderTable);
+$('#searchName').addEventListener('input', renderTable);
+
+// ALERTS
+function renderAlerts(){
+  const alerts = DATA.filter(d=>d.margem<8 && d.rake>2000).sort((a,b)=>b.rake-a.rake);
+  const cols = ['#','Nome','Rake','Lucro','Profit','Margem','Rakeback','Acao'];
+  const thead = cols.map(c=>`<th>${c}</th>`).join('');
+  const tbody = alerts.map(d => {
+    const pc = d.profit>=0?'profit-pos':'profit-neg';
+    return `<tr class="alert-row"><td>${d.rank}</td><td><b>${d.nome}</b></td><td>${fmt(d.rake)}</td>
+      <td>${fmt(d.lucro)}</td><td class="${pc}">${fmtD(d.profit)}</td>
+      <td>${pct(d.margem)}</td><td>${pct(d.rb)}</td><td>${d.acao}</td></tr>`;
+  }).join('');
+  $('#alertTable thead').innerHTML = `<tr>${thead}</tr>`;
+  $('#alertTable tbody').innerHTML = tbody;
+}
+
+// CHARTS
+const PL = {bg:'#1a1d27',grid:'#2d3148',font:{color:'#e6e6e6',size:11}};
+function renderCharts(){
+  const t30 = DATA.slice(0,30).slice().reverse();
+  // Bar
+  Plotly.newPlot('chartBar',[
+    {y:t30.map(d=>d.nome),x:t30.map(d=>d.rake),type:'bar',orientation:'h',name:'Rake Total',
+     marker:{color:'#6366f1',opacity:.85},text:t30.map(d=>fmt(d.rake)),textposition:'outside',textfont:{size:10,color:'#8b8fa3'}},
+    {y:t30.map(d=>d.nome),x:t30.map(d=>d.lucro),type:'bar',orientation:'h',name:'Lucro Clube',
+     marker:{color:'#22c55e',opacity:.85},text:t30.map(d=>fmt(d.lucro)),textposition:'outside',textfont:{size:10,color:'#8b8fa3'}},
+  ],{barmode:'group',height:900,plot_bgcolor:PL.bg,paper_bgcolor:PL.bg,font:PL.font,
+    margin:{l:180,r:80,t:50,b:40},legend:{orientation:'h',yanchor:'bottom',y:1.02,xanchor:'right',x:1},
+    xaxis:{gridcolor:PL.grid,title:'$',zeroline:false},yaxis:{gridcolor:PL.grid},
+    title:{text:'Top 30 — Rake vs Lucro',font:{size:16}}},{displayModeBar:false});
+
+  // Pie
+  const bins=['Top 10','Top 11-30','Top 31-100','Demais'];
+  const vals=[DATA.slice(0,10).reduce((s,d)=>s+d.rake,0),DATA.slice(10,30).reduce((s,d)=>s+d.rake,0),
+              DATA.slice(30,100).reduce((s,d)=>s+d.rake,0),DATA.slice(100).reduce((s,d)=>s+d.rake,0)];
+  const tR=DATA.reduce((s,d)=>s+d.rake,0);
+  Plotly.newPlot('chartPie',[{labels:bins,values:vals,type:'pie',hole:.5,
+    marker:{colors:['#6366f1','#818cf8','#a5b4fc','#2d3148']},textinfo:'label+percent',textfont:{size:12,color:'#e6e6e6'}}],
+    {height:350,plot_bgcolor:PL.bg,paper_bgcolor:PL.bg,font:PL.font,showlegend:false,
+     margin:{l:20,r:20,t:50,b:20},title:{text:'Concentracao do Rake',font:{size:14}},
+     annotations:[{text:fmt(tR),x:.5,y:.5,font:{size:15,color:'#e6e6e6'},showarrow:false}]},{displayModeBar:false});
+
+  // Tipo
+  const tipos=['Jogador','Agente'];
+  Plotly.newPlot('chartTipo',[
+    {x:tipos,y:tipos.map(t=>DATA.filter(d=>d.tipo===t).reduce((s,d)=>s+d.rake,0)),type:'bar',name:'Rake',marker:{color:'#6366f1'}},
+    {x:tipos,y:tipos.map(t=>DATA.filter(d=>d.tipo===t).reduce((s,d)=>s+d.lucro,0)),type:'bar',name:'Lucro',marker:{color:'#22c55e'}},
+  ],{barmode:'group',height:350,plot_bgcolor:PL.bg,paper_bgcolor:PL.bg,font:PL.font,
+    margin:{l:60,r:20,t:50,b:40},xaxis:{gridcolor:PL.grid},yaxis:{gridcolor:PL.grid,title:'$'},
+    title:{text:'Agentes vs Jogadores',font:{size:14}},
+    legend:{orientation:'h',yanchor:'bottom',y:1.02,xanchor:'right',x:1}},{displayModeBar:false});
+
+  // Scatter
+  const top100=DATA.slice(0,100);
+  const mxR=Math.max(...top100.map(d=>d.rake));
+  const traces=['Jogador','Agente'].map(tipo=>{
+    const sub=top100.filter(d=>d.tipo===tipo);
+    return {x:sub.map(d=>d.rake),y:sub.map(d=>d.lucro),mode:'markers+text',name:tipo,type:'scatter',
+      marker:{size:sub.map(d=>Math.max(d.hands/2000+5,6)),opacity:.7,color:tipo==='Jogador'?'#6366f1':'#eab308'},
+      text:sub.map(d=>d.rank<=15?d.nome:''),textposition:'top center',textfont:{size:9,color:'#e6e6e6'},
+      hovertemplate:'<b>%{customdata[0]}</b><br>Rake: $%{x:,.0f}<br>Lucro: $%{y:,.0f}<br>Margem: %{customdata[1]:.1f}%<extra></extra>',
+      customdata:sub.map(d=>[d.nome,d.margem])};
+  });
+  [8,20,40].forEach(p=>traces.push({x:[0,mxR],y:[0,mxR*p/100],mode:'lines',line:{dash:'dot',color:'#8b8fa3',width:1},showlegend:false,hoverinfo:'skip'}));
+  Plotly.newPlot('chartScatter',traces,
+    {height:500,plot_bgcolor:PL.bg,paper_bgcolor:PL.bg,font:PL.font,
+     xaxis:{title:'Rake Total ($)',gridcolor:PL.grid,zeroline:false},yaxis:{title:'Lucro Clube ($)',gridcolor:PL.grid,zeroline:false},
+     legend:{orientation:'h',yanchor:'bottom',y:1.02,xanchor:'right',x:1},margin:{l:60,r:20,t:50,b:50},
+     title:{text:'Rake vs Lucro (tamanho=hands, linhas=margem 8%/20%/40%)',font:{size:14}}},{displayModeBar:false});
+
+  // Line (top 10 of current period)
+  const validWeeks = new Set(getFilteredWeeks());
+  const top10names = DATA.slice(0,10).map(d=>d.nome);
+  const lineTraces = top10names.map(nome => {
+    const pts = RAW_WEEKLY.filter(w=>w.n===nome && validWeeks.has(w.s)).sort((a,b)=>a.s.localeCompare(b.s));
+    return {x:pts.map(p=>p.s),y:pts.map(p=>p.r),mode:'lines+markers',name:nome};
+  });
+  Plotly.newPlot('chartLine',lineTraces,
+    {height:450,plot_bgcolor:PL.bg,paper_bgcolor:PL.bg,font:PL.font,
+     xaxis:{gridcolor:PL.grid,title:''},yaxis:{gridcolor:PL.grid,title:'Rake ($)'},
+     legend:{font:{size:10}},margin:{l:60,r:20,t:50,b:40},
+     title:{text:'Evolucao Semanal de Rake — Top 10',font:{size:14}}},{displayModeBar:false});
+}
+
+// LOAD
+fetch('data.json').then(r=>r.json()).then(d=>{
+  RAW_PLAYERS = d.players;
+  RAW_WEEKLY = d.weekly;
+  META = d.meta;
+  recompute();
+}).catch(e => {
+  document.body.innerHTML = '<div style="padding:40px;color:#ef4444"><h2>Erro ao carregar dados</h2><p>'+e+'</p></div>';
+});
+</script>
+</body>
+</html>
